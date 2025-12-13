@@ -3,6 +3,7 @@ package com.example.greetingcard
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -12,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
@@ -24,17 +26,71 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val whitelist = listOf(
+      //  val whitelist = listOf(
+//            "https://imageprawojazdy.pl/",
+//            "https://www.e-prawojazdy.eu/",
+//            "https://randomnerdtutorials.com/",
+//            "https://cerkiew-gdansk.pl/",
+//            "https://www.accuweather.com/",
+//            "https://it.pracuj.pl/",
+//            // White screen - fix to do
+//            //"https://www.luxmed.pl/",
+//            //"https://portalpacjenta.luxmed.pl/",
+//            "https://www.play.pl/",
+//            "https://login.play.pl/", // hidden
+//            "https://24.play.pl/",  // hidden
+//            "https://doladowania.play.pl/",
+//            //"https://linuxfromscratch.org/", - add later
+//            "https://www.ifixit.com/",
+//            "https://aniagotuje.pl/",
+//            "https://www.russianfood.com/",
+//        )
+
+        val allowedUrls = listOf(
             "https://imageprawojazdy.pl/",
             "https://www.e-prawojazdy.eu/",
             "https://randomnerdtutorials.com/",
+            "https://cerkiew-gdansk.pl/",
+            "https://www.accuweather.com/",
+            "https://it.pracuj.pl/",
+            "https://www.play.pl/",
+            "https://login.play.pl/",
+            "https://24.play.pl/",
+            "https://doladowania.play.pl/",
+            "https://www.ifixit.com/",
+            "https://aniagotuje.pl/",
+            "https://www.russianfood.com/",
+            "https://www.luxmed.pl/",
+            "https://portalpacjenta.luxmed.pl/",
+            "https://aquastacja.pl/",
+            "https://regiojet.pl/",
+            "https://azbyka.ru/",
+        )
+
+        // Список разрешённых доменов (host!)
+        val allowedHosts = listOf(
+            "imageprawojazdy.pl",
+            "e-prawojazdy.eu",
+            "randomnerdtutorials.com",
+            "cerkiew-gdansk.pl",
+            "accuweather.com",
+            "pracuj.pl",
+            "play.pl",
+            "ifixit.com",
+            "aniagotuje.pl",
+            "russianfood.com",
+            "luxmed.pl",
+            "aquastacja.pl",
+            "regiojet.pl",
+            "azbyka.ru"
         )
 
         setContent {
             GreetingCardTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
                     BrowserScreen(
-                        allowedDomains = whitelist,
+                        allowedUrls = allowedUrls,
+                        allowedHosts = allowedHosts,
                         modifier = Modifier.padding(padding)
                     )
                 }
@@ -45,19 +101,25 @@ class MainActivity : ComponentActivity() {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun BrowserScreen(allowedDomains: List<String>, modifier: Modifier = Modifier) {
-
+fun BrowserScreen(
+    allowedUrls: List<String>,
+    allowedHosts: List<String>,
+    modifier: Modifier = Modifier
+) {
     var webView: WebView? by remember { mutableStateOf(null) }
 
-    // выбранный сайт из списка
-    var selectedUrl by remember { mutableStateOf(allowedDomains.first()) }
+    // 🔥 состояние WebView
+    val webViewState = rememberSaveable { Bundle() }
 
-    // состояние меню
+    var selectedUrl by rememberSaveable {
+        mutableStateOf(allowedUrls.first())
+    }
+
     var expanded by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize()) {
 
-        // ---------- Навигационное меню ----------
+        // ---------- Навигация ----------
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -65,19 +127,21 @@ fun BrowserScreen(allowedDomains: List<String>, modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
 
-            // Выбор URL из whitelist
             Box {
                 Button(onClick = { expanded = true }) {
                     Text("🔗 Сайты")
                 }
 
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    allowedDomains.forEach { option ->
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    allowedUrls.forEach { url ->
                         DropdownMenuItem(
-                            text = { Text(option) },
+                            text = { Text(url) },
                             onClick = {
-                                selectedUrl = option
-                                webView?.loadUrl(option)
+                                selectedUrl = url
+                                webView?.loadUrl(url)
                                 expanded = false
                             }
                         )
@@ -98,27 +162,55 @@ fun BrowserScreen(allowedDomains: List<String>, modifier: Modifier = Modifier) {
                 WebView(context).apply {
 
                     settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.loadsImagesAutomatically = true
+                    settings.useWideViewPort = true
+                    settings.loadWithOverviewMode = true
+                    settings.javaScriptCanOpenWindowsAutomatically = true
+                    settings.mixedContentMode =
+                        WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+                    settings.userAgentString =
+                        settings.userAgentString.replace("wv", "")
 
                     webViewClient = object : WebViewClient() {
+
                         override fun shouldOverrideUrlLoading(
-                            view: WebView?,
-                            request: WebResourceRequest?
+                            view: WebView,
+                            request: WebResourceRequest
                         ): Boolean {
+                            if (!request.isForMainFrame) return false
 
-                            val url = request?.url.toString()
-
-                            return if (allowedDomains.any { url.contains(it) }) {
+                            val host = request.url.host ?: return true
+                            return if (allowedHosts.any { host.endsWith(it) }) {
                                 false
                             } else {
-                                Toast.makeText(context, "🚫 Доступ запрещён", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "🚫 Доступ запрещён:\n$host",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                                 true
                             }
                         }
                     }
 
-                    loadUrl(selectedUrl)
+                    // 🔥 ВОССТАНОВЛЕНИЕ
+                    if (webViewState.isEmpty) {
+                        loadUrl(selectedUrl)
+                    } else {
+                        restoreState(webViewState)
+                    }
+
                     webView = this
                 }
+            },
+            update = { view ->
+                webView = view
+            },
+            onRelease = { view ->
+                // 🔥 СОХРАНЕНИЕ
+                view.saveState(webViewState)
             }
         )
     }
