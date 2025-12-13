@@ -3,6 +3,7 @@ package com.example.greetingcard
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -25,27 +26,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-      //  val whitelist = listOf(
-//            "https://imageprawojazdy.pl/",
-//            "https://www.e-prawojazdy.eu/",
-//            "https://randomnerdtutorials.com/",
-//            "https://cerkiew-gdansk.pl/",
-//            "https://www.accuweather.com/",
-//            "https://it.pracuj.pl/",
-//            // White screen - fix to do
-//            //"https://www.luxmed.pl/",
-//            //"https://portalpacjenta.luxmed.pl/",
-//            "https://www.play.pl/",
-//            "https://login.play.pl/", // hidden
-//            "https://24.play.pl/",  // hidden
-//            "https://doladowania.play.pl/",
-//            //"https://linuxfromscratch.org/", - add later
-//            "https://www.ifixit.com/",
-//            "https://aniagotuje.pl/",
-//            "https://www.russianfood.com/",
-//        )
-
         val allowedUrls = listOf(
             "https://imageprawojazdy.pl/",
             "https://www.e-prawojazdy.eu/",
@@ -116,6 +96,19 @@ fun BrowserScreen(
     }
 
     var expanded by remember { mutableStateOf(false) }
+
+    // 🔥 Домены рекламы (AdBlock)
+    val adHosts = listOf(
+        "doubleclick.net",
+        "googlesyndication.com",
+        "googleadservices.com",
+        "adservice.google.com",
+        "adsystem.com",
+        "taboola.com",
+        "outbrain.com",
+        "facebookads",
+        "ads.twitter.com"
+    )
 
     Column(modifier = modifier.fillMaxSize()) {
 
@@ -193,7 +186,29 @@ fun BrowserScreen(
                                 true
                             }
                         }
+
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest
+                        ): WebResourceResponse? {
+
+                            val host = request.url.host ?: return null
+
+                            if (adHosts.any { host.contains(it) }) {
+                                // 🚫 Блокируем рекламный запрос
+                                return WebResourceResponse(
+                                    "text/plain",
+                                    "utf-8",
+                                    null
+                                )
+                            }
+
+                            return super.shouldInterceptRequest(view, request)
+                        }
+
                     }
+
+
 
                     // 🔥 ВОССТАНОВЛЕНИЕ
                     if (webViewState.isEmpty) {
