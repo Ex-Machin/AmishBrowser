@@ -45,8 +45,9 @@ class MainActivity : ComponentActivity() {
             "https://aquastacja.pl/",
             "https://regiojet.pl/",
             "https://azbyka.ru/",
+            "https://pythontutor.ru/old/",
+            "https://pythontutor.ru/"
         )
-
         // Список разрешённых доменов (host!)
         val allowedHosts = listOf(
             "imageprawojazdy.pl",
@@ -62,8 +63,10 @@ class MainActivity : ComponentActivity() {
             "luxmed.pl",
             "aquastacja.pl",
             "regiojet.pl",
-            "azbyka.ru"
+            "azbyka.ru",
+            "pythontutor.ru"
         )
+
 
         setContent {
             GreetingCardTheme {
